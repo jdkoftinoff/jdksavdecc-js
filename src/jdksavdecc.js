@@ -1,4 +1,3 @@
-
 /*
   Copyright (c) 2014, J.D. Koftinoff Software, Ltd. <jeffk@jdkoftinoff.com>
   All rights reserved.
@@ -102,8 +101,51 @@ jdksavdecc.setBitField = function(data,startbit,width,value) {
 	}
 }
 
-jdksavdecc.Octet = function(octets) {
-	this.data = octets.subarray(0,1);
+jdksavdecc.Bit = function(data,offset,bit_num) {
+    o = offset + (bit_num>>>3);
+    this.bit_num = bit_num&0x7;
+    this.data = data.subarray(o,o+1);
+}
+
+jdksavdecc.Bit.prototype.get = function() {
+    return jdksavdecc.getBit(this.data,this.bit_num);
+}
+
+jdksavdecc.Bit.prototype.set = function(v) {
+    jdksavdecc.setBit(this.data,this.bit_num,v);
+}
+
+jdksavdecc.Bit.prototype.toString = function() {
+    return this.get().toString();
+}
+
+
+jdksavdecc.BitField = function(data,offset,bit_num,width) {
+    o = offset + (bit_num>>>3);
+    this.bit_num = bit_num&0x7;
+    this.data = data.subarray(o,o+(width>>>3)+1);
+    this.width = width;
+}
+
+jdksavdecc.BitField.prototype.get = function() {
+    return jdksavdecc.getBitField(this.data,this.bit_num,this.width);
+}
+
+jdksavdecc.BitField.prototype.set = function(v) {
+    jdksavdecc.setBitField(this.data,this.bit_num,this.width,v);
+}
+
+jdksavdecc.BitField.prototype.toString = function() {
+    return this.get().toString();
+}
+
+
+jdksavdecc.Octet = function(data) {
+    if( typeof data === "undefined" ) {
+        this.data = new Uint8Array(1);
+    } else {
+	    this.data = data.subarray(0,1);
+    }
 }
 
 jdksavdecc.Octet.prototype.get = function(v) {
@@ -119,8 +161,12 @@ jdksavdecc.Octet.prototype.toString = function() {
 	return s;
 }
 
-jdksavdecc.Doublet = function(octets) {
-	this.data = octets.subarray(0,2);
+jdksavdecc.Doublet = function(data) {
+    if( typeof data === "undefined" ) {
+        this.data = new Uint8Array(2);
+    } else {
+	    this.data = data.subarray(0,2);
+    }
 }
 
 jdksavdecc.Doublet.prototype.get = function(v) {
@@ -139,8 +185,12 @@ jdksavdecc.Doublet.prototype.toString = function() {
 }
 
 
-jdksavdecc.Quadlet = function(octets) {
-	this.data = octets.subarray(0,4);
+jdksavdecc.Quadlet = function(data) {
+    if( typeof data === "undefined" ) {
+        this.data = new Uint8Array(4);
+    } else {
+	    this.data = data.subarray(0,4);
+    }
 }
 
 jdksavdecc.Quadlet.prototype.get = function(v) {
@@ -166,9 +216,52 @@ jdksavdecc.Quadlet.prototype.toString = function() {
 }
 
 
-jdksavdecc.EUI48 = function(octets) {
-    this.data = octets.subarray(0,6);
+jdksavdecc.Octlet = function(data) {
+    if( typeof data === "undefined" ) {
+        this.data_high = new Uint8Array(4);
+        this.data_low = new Uint8Array(4);
+    } else {
+	    this.data_high = new jdksavdecc.Doublet( data.subarray(0,4) );
+	    this.data_low = new jdksavdecc.Doublet( data.subarray(4,8) );
+    }
+
 }
+
+jdksavdecc.Octlet.prototype.get = function(v) {
+    return [this.data_high, this.data_low];
+}
+
+jdksavdecc.Octlet.prototype.set = function(hi,lo) {
+    this.data_high.set(hi);
+    this.data_low.set(lo);
+}
+
+jdksavdecc.Octlet.prototype.toString = function() {
+	s = this.data_high.toString() + this.data_low.toString();
+	return s;
+}
+
+
+jdksavdecc.EUI48 = function(data) {
+    if( typeof data === "undefined") {
+        this.data = new Uint8Array(6);
+    } else if( data.constructor.name === "Uint8Array" ) {
+        this.data = data.subarray(0,6);
+    } else {
+        this.data = new Uint8Array(data);
+    }
+}
+
+jdksavdecc.EUI48.get = function() {
+    return this.data;
+}
+
+jdksavdecc.EUI48.set = function(v) {
+    for( var i=0; i<6; ++i ) {
+        this.data[i] = v[i];
+    }
+}
+
 
 jdksavdecc.EUI48.prototype.toString = function() {
 	s = jdksavdecc.toHexOctet(this.data[0]) + ':' +
@@ -189,8 +282,25 @@ jdksavdecc.EUI48.prototype.setBit = function(index,bit,v) {
 }
 
 
-jdksavdecc.EUI64 = function(octets) {
-    this.data = octets.subarray(0,8);
+jdksavdecc.EUI64 = function(data) {
+    if( typeof data === "undefined") {
+        this.data = new Uint8Array(8);
+    } else if( data.constructor.name === "Uint8Array" ) {
+        this.data = data.subarray(0,8);
+    } else {
+        this.data = new Uint8Array(data);
+    }
+
+}
+
+jdksavdecc.EUI64.get = function() {
+    return this.data;
+}
+
+jdksavdecc.EUI64.set = function(v) {
+    for( var i=0; i<8; ++i ) {
+        this.data[i] = v[i];
+    }
 }
 
 jdksavdecc.EUI64.prototype.toString = function() {
@@ -214,28 +324,28 @@ jdksavdecc.EUI64.prototype.setBit = function(index,bit,v) {
 }
 
 
-jdksavdecc.PDU = function(octets) {
-    this.data = octets;    
+jdksavdecc.PDU = function(data) {
+    this.data = data;    
 }
 
 jdksavdecc.PDU.prototype.length = function() { 
 	return this.data.length(); 
 }
 
-jdksavdecc.PDU.prototype.getBit = function(index,bit) {
-	return jdksavdecc.getBit( this.data, (index<<3) + bit );
+jdksavdecc.PDU.prototype.getBit = function(offset,bit) {
+	return new jdksavdecc.Bit( this.data, offset, bit );
 }
 
-jdksavdecc.PDU.prototype.setBit = function(index,bit,v) {
-	jdksavdecc.setBit( this.data, (index<<3) + bit, v );
+jdksavdecc.PDU.prototype.setBit = function(offset,bit,v) {
+	jdksavdecc.setBit( this.data, (offset<<3) + bit, v );
 }
 
-jdksavdecc.PDU.prototype.getBitfield = function(index,startbit,width) {
-	return jdksavdecc.getBitField( this.data, (index<<3) + startbit, width );
+jdksavdecc.PDU.prototype.getBitField = function(offset,startbit,width) {
+	return new jdksavdecc.BitField( this.data, offset, startbit, width );
 }
 
-jdksavdecc.PDU.prototype.setBitField = function(index,startbit,width,v) {
-	jdksavdecc.setBitField( this.data, (index<<3) + startbit, width, v );
+jdksavdecc.PDU.prototype.setBitField = function(offset,startbit,width,v) {
+	jdksavdecc.setBitField( this.data, (offset<<3) + startbit, width, v );
 }
 
 jdksavdecc.PDU.prototype.getOctet = function(index) { 
@@ -270,7 +380,7 @@ jdksavdecc.PDU.prototype.getEUI48 = function(index) {
 }
 
 jdksavdecc.PDU.prototype.setEUI48 = function(index,val) { 
-	this.data.set(val.octets,index); 
+	this.data.set(val.data,index); 
 }
 
 jdksavdecc.PDU.prototype.getEUI64 = function(index) { 
@@ -278,7 +388,7 @@ jdksavdecc.PDU.prototype.getEUI64 = function(index) {
 }
 
 jdksavdecc.PDU.prototype.setEUI64 = function(index,val) { 
-	this.data.set(val.octets,index); 
+	this.data.set(val.data,index); 
 }
 
 jdksavdecc.PDU.prototype.length = function() {
@@ -293,37 +403,93 @@ jdksavdecc.PDU.prototype.toString = function() {
 	return r; 
 }
 
-jdksavdecc.EthernetFrame = function(octets) {
-    this.da = new jdksavdecc.EUI48( octets.subarray(0,6) );
-    this.sa = new jdksavdecc.EUI48( octets.subarray(6,12) );
-    this.ethertype = new jdksavdecc.Doublet( octets.subarray(12,14) );
+jdksavdecc.EthernetFrame = function(data) {
+    this._data = data;
+    this.da = new jdksavdecc.EUI48( data.subarray(0,6) );
+    this.sa = new jdksavdecc.EUI48( data.subarray(6,12) );
+    this.ethertype = new jdksavdecc.Doublet( data.subarray(12,14) );
     if( this.ethertype.get() == 0x8100 ) {
-    	this.tag = new jdksavdecc.Quadlet( octets.subarray(12,16) );
-    	this.ethertype =  new jdksavdecc.Doublet( octets.subarray(16,18) );
-	    this.payload = new jdksavdecc.PDU( octets.subarray(18) );    
+    	this.tag = new jdksavdecc.Quadlet( data.subarray(12,16) );
+    	this.ethertype =  new jdksavdecc.Doublet( data.subarray(16,18) );
+	    this.payload = new jdksavdecc.PDU( data.subarray(18) );    
     } else {
-	    this.payload = new jdksavdecc.PDU( octets.subarray(14) );        
+	    this.payload = new jdksavdecc.PDU( data.subarray(14) );        
     }
 }
 
 jdksavdecc.EthernetFrame.prototype.flatten = function() {
-	var r;
-	if( "tag" in this ) {
-		r=new Uint8Array(6+6+4+2+this.payload.length());
-		for( var i=0; i<6; ++i ) { r[0+i] = this.da.data[i]; }
-		for( var i=0; i<6; ++i ) { r[6+i] = this.sa.data[i]; }
-		for( var i=0; i<4; ++i ) { r[12+i] = this.tag.data[i]; }
-		for( var i=0; i<2; ++i ) { r[16+i] = this.ethertype.data[i]; }
-		for( var i=0; i<this.payload.length(); ++i ) { r[18+i] = this.payload.data[i]; }
-	} else {
-		r=new Uint8Array(6+6+2+this.payload.length());
-		for( var i=0; i<6; ++i ) { r[0+i] = this.da.data[i]; }
-		for( var i=0; i<6; ++i ) { r[6+i] = this.sa.data[i]; }
-		for( var i=0; i<2; ++i ) { r[12+i] = this.ethertype.data[i]; }
-		for( var i=0; i<this.payload.length(); ++i ) { r[14+i] = this.payload.data[i]; }
-	}
-	return r;
+    return this._data;
 }
+
+jdksavdecc.AVTPDU = function(pdu) {
+    this.cd = pdu.getBit(0,0);
+    this.subtype = pdu.getBitField(0,1,7);
+    this.sv = pdu.getBit(0,8);
+    this.version = pdu.getBitField(0,9,3);
+    this.control_data = pdu.getBitField(0,12,4);
+    this.status = pdu.getBitField(0,16,5);
+    this.control_data_length = pdu.getBitField(21,11);
+    this.stream_id = pdu.getEUI64(4);
+}
+
+jdksavdecc.ADPDU = function(pdu) {
+    this.cd = pdu.getBit(0,0);
+    this.subtype = pdu.getBitField(0,1,7);
+    this.sv = pdu.getBit(0,8);
+    this.version = pdu.getBitField(0,9,3);
+    this.message_type = pdu.getBitField(0,12,4);
+    this.valid_time = pdu.getBitField(0,16,5);
+    this.control_data_length = pdu.getBitField(0,21,11);
+    this.entity_id = pdu.getEUI64(4);    
+    this.entity_model_id = pdu.getEUI64(12+0);
+    this.entity_capabilities = pdu.getQuadlet(12+8);
+    this.talker_stream_sources = pdu.getDoublet(12+12);
+    this.talker_capabilities = pdu.getDoublet(12+14);
+    this.listener_stream_sinks = pdu.getDoublet(12+16);
+    this.listener_capabilities = pdu.getDoublet(12+18);
+    this.controller_capabilities = pdu.getQuadlet(12+20);
+    this.available_index = pdu.getQuadlet(12+24);
+    this.gptp_grandmaster_id = pdu.getEUI64(12+28);
+    this.gptp_domain_number = pdu.getOctet(12+36);
+    this.identify_control_index = pdu.getDoublet(12+40);
+    this.interface_index = pdu.getDoublet(12+42);
+    this.association_id = pdu.getEUI64(12+44);
+}
+
+jdksavdecc.CreateADPDUFrame = function( da, sa, message_type, valid_time, entity_id, entity_model_id, entity_capabilities, controller_capabilities, available_index ) {
+    data = new Uint8Array(68);
+    frame = new jdksavdecc.EthernetFrame(data);
+    frame.da.set(da);
+    frame.sa.set(sa);
+    frame.ethertype.set(0x22f0);
+    adpdu = new jdksavdecc.ADPDU( frame.payload );
+    adpdu.cd.set(true);
+    adpdu.subtype.set(0x7a);
+    adpdu.sv.set(false);
+    adpdu.version.set(0);
+    adpdu.message_type.set(message_type);
+    adpdu.valid_time.set(valid_time);
+    adpdu.control_data_length.set(0x38);
+    adpdu.entity_id.set(entity_id);
+    adpdu.entity_model_id.set(entity_model_id);
+    adpdu.entity_capabilities.set(entity_capabilities);
+    adpdu.controller_capabilities.set(controller_capabilities);
+    adpdu.available_index.set(available_index);
+    return adpdu;
+}
+
+
+jdksavdecc.adp_acmp_multicast = new jdksavdecc.EUI48( new Uint8Array( [0x91,0xe0,0xf0,0x01,0x00,0x00] ) );
+jdksavdecc.identification_multicast = new jdksavdecc.EUI48( new Uint8Array( [0x91,0xe0,0xf0,0x01,0x00,0x01] ) );
+
+   
 
 d1=new Uint8Array( [0x90, 0xe0, 0xf0, 0x01, 0x00, 0x00, 0x00, 0x1c, 0xab, 0x11, 0x22, 0x33, 0x22, 0xf0, 0xfa, 0x00, 0x00, 0x00, 0x10, 0x03, 0xff, 0xff, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0, 0xf1, 0xf2 ] );
 d2=new Uint8Array( [0x90, 0xe0, 0xf0, 0x01, 0x00, 0x00, 0x00, 0x1c, 0xab, 0x11, 0x22, 0x33, 0x81, 0x00, 0x00, 0x00, 0x22, 0xf0, 0xfa, 0x00, 0x00, 0x00, 0x10, 0x03, 0xff, 0xff, 0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0, 0xf1, 0xf2 ] );
+
+e1=new jdksavdecc.EthernetFrame(d1);
+e2=new jdksavdecc.EthernetFrame(d2);
+
+adv = new Uint8Array( [0x90, 0xe0, 0xf0, 0x01, 0x00, 0x00, 0x00, 0x1c, 0xab, 0x11, 0x22, 0x33, 0x22, 0xf0, 0xfa, 0x00, 0x28, 0x38, 0x00, 0x1c, 0xab, 0x00, 0x01, 0x00, 0x30, 0xba, 0x00, 0x1c, 0xab, 0x00, 0x00, 0x00, 0x10, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] )
+
+advf = new jdksavdecc.EthernetFrame(adv);
